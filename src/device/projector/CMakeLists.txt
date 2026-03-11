@@ -9,6 +9,7 @@ set(PROJECTOR_ROOT_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/common/projectorFactory.c
 
 find_package(OpenCV REQUIRED)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/module/projector_dlpc_api)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/module/projector_hdmi)
 
 if(BUILD_SLMASTER_SHARED)
     add_library(projector SHARED)
@@ -20,10 +21,11 @@ endif()
 
 target_sources(projector PUBLIC ${PROJECTOR_ROOT_HEADER} ${PROJECTOR_ROOT_SOURCES})
 
-target_include_directories(projector PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common ${CMAKE_CURRENT_SOURCE_DIR}/module/projector_dlpc_api/include)
+target_include_directories(projector PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common ${CMAKE_CURRENT_SOURCE_DIR}/module/projector_dlpc_api/include ${CMAKE_CURRENT_SOURCE_DIR}/module/projector_hdmi/include)
 
 target_link_libraries(
     projector
     PUBLIC
     projectorDlpcApi
+    projectorHdmi
 )

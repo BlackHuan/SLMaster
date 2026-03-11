@@ -18,6 +18,7 @@
 #include "projector.h"
 #include "projectorDlpc34xx.h"
 #include "projectorDlpc34xxDual.h"
+#include "projectorHdmi.h"
 
 #include "typeDef.h"
 
@@ -43,6 +44,10 @@ class DEVICE_API ProjectorFactory {
 
             else if ("DLP3010" == dlpEvm) {
                 projector = new ProjectorDlpc34xx();
+                projectoies_[dlpEvm] = projector;
+            }
+            else if ("HDMI" == dlpEvm) {
+                projector = new ProjectorHdmi();
                 projectoies_[dlpEvm] = projector;
             }
             // TODO@Evans Liu:增加DLP6500支持
