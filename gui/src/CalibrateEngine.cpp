@@ -615,9 +615,7 @@ bool CalibrateEngine::captureOnce() {
     std::string camManufactor, leftCameraName, rightCameraName, colorCameraName,
         dlpEvmName;
     slCamera->getStringAttribute("2D Camera Manufactor", camManufactor);
-    const CameraFactory::CameraManufactor manufator =
-        camManufactor == "Huaray" ? CameraFactory::Huaray
-                                  : CameraFactory::Halcon;
+    const auto manufator = CameraFactory::fromString(camManufactor);
     slCamera->getStringAttribute("Left Camera Name", leftCameraName);
     slCamera->getStringAttribute("DLP Evm", dlpEvmName);
 

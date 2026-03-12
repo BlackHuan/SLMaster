@@ -10,6 +10,7 @@ set(CAMERA_ROOT_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/common/cameraFactory.cpp ${C
 find_package(OpenCV REQUIRED)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/module/huaray_camera)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/module/daheng_camera)
 
 if(BUILD_SLMASTER_SHARED)
     add_library(camera SHARED)
@@ -21,11 +22,12 @@ endif()
 
 target_sources(camera PUBLIC ${CAMERA_ROOT_HEADER} ${CAMERA_ROOT_SOURCES})
 
-target_include_directories(camera PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common ${CMAKE_CURRENT_SOURCE_DIR}/module/huaray_camera/include)
+target_include_directories(camera PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common ${CMAKE_CURRENT_SOURCE_DIR}/module/huaray_camera/include ${CMAKE_CURRENT_SOURCE_DIR}/module/daheng_camera/include)
 
 target_link_libraries(
     camera
     PUBLIC
     huarayCamera
+    dahengCamera
     ${OpenCV_LIBRARIES}
 )

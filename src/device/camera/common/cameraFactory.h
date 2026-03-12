@@ -33,6 +33,12 @@ class DEVICE_API CameraFactory {
         Daheng      // 大恒光电
     };
 
+    static CameraManufactor fromString(const std::string &name) {
+        if (name == "Huaray") return Huaray;
+        if (name == "Daheng") return Daheng;
+        return Halcon;
+    }
+
     Camera *getCamera(std::string cameraUserId, CameraManufactor manufactor) {
         Camera *camera = nullptr;
 

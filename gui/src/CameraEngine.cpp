@@ -267,10 +267,8 @@ void CameraEngine::createTenLine() {
 
 void CameraEngine::switchTrigMode(const bool isTrigLine,
                                   const int exposureTime) {
-    const CameraFactory::CameraManufactor manufator =
-        getStringAttribute("2D Camera Manufactor") == "Huaray"
-            ? CameraFactory::Huaray
-            : CameraFactory::Halcon;
+    const auto manufator =
+        CameraFactory::fromString(getStringAttribute("2D Camera Manufactor").toStdString());
     auto leftCamera = getSLCamera()->getCameraFactory()->getCamera(
         getStringAttribute("Left Camera Name").toStdString(), manufator);
     std::string rightCameraName, colorCameraName;
@@ -967,10 +965,8 @@ void CameraEngine::projectOnce() {
     }
 
     workThread_ = std::thread([&] {
-        const CameraFactory::CameraManufactor manufator =
-            getStringAttribute("2D Camera Manufactor") == "Huaray"
-                ? CameraFactory::Huaray
-                : CameraFactory::Halcon;
+        const auto manufator =
+            CameraFactory::fromString(getStringAttribute("2D Camera Manufactor").toStdString());
         auto leftCamera = getSLCamera()->getCameraFactory()->getCamera(
             getStringAttribute("Left Camera Name").toStdString(), manufator);
         auto projector = getSLCamera()->getProjectorFactory()->getProjector(
@@ -1062,10 +1058,8 @@ void CameraEngine::projectContinues() {
     }
 
     workThread_ = std::thread([&] {
-        const CameraFactory::CameraManufactor manufator =
-            getStringAttribute("2D Camera Manufactor") == "Huaray"
-                ? CameraFactory::Huaray
-                : CameraFactory::Halcon;
+        const auto manufator =
+            CameraFactory::fromString(getStringAttribute("2D Camera Manufactor").toStdString());
         auto leftCamera = getSLCamera()->getCameraFactory()->getCamera(
             getStringAttribute("Left Camera Name").toStdString(), manufator);
         auto projector = getSLCamera()->getProjectorFactory()->getProjector(
