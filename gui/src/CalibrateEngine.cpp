@@ -637,29 +637,59 @@ bool CalibrateEngine::captureOnce() {
             slCamera->getCameraFactory()->getCamera(colorCameraName, manufator);
     }
 
-    projector->project(false);
-
     const int imgSizeWaitFor =
         CameraEngine::instance()->getNumberAttribute("Total Fringes");
-    const int totalExposureTime =
-        (CameraEngine::instance()->getNumberAttribute("Pre Exposure Time") +
-         CameraEngine::instance()->getNumberAttribute("Exposure Time") +
-         CameraEngine::instance()->getNumberAttribute("Aft Exposure Time")) *
-        imgSizeWaitFor;
-    auto endTime = std::chrono::steady_clock::now() +
-                   std::chrono::duration<int, std::ratio<1, 1000000>>(
-                       totalExposureTime + 1000000);
-    while (leftCamera->getImgs().size() != imgSizeWaitFor) {
-        if (std::chrono::steady_clock::now() > endTime) {
-            leftCamera->clearImgs();
+
+    if (projector->isHardwareTriggerSupported()) {
+        projector->project(false);
+
+        const int totalExposureTime =
+            (CameraEngine::instance()->getNumberAttribute(
+                 "Pre Exposure Time") +
+             CameraEngine::instance()->getNumberAttribute("Exposure Time") +
+             CameraEngine::instance()->getNumberAttribute(
+                 "Aft Exposure Time")) *
+            imgSizeWaitFor;
+        auto endTime = std::chrono::steady_clock::now() +
+                       std::chrono::duration<int, std::ratio<1, 1000000>>(
+                           totalExposureTime + 1000000);
+        while (leftCamera->getImgs().size() != imgSizeWaitFor) {
+            if (std::chrono::steady_clock::now() > endTime) {
+                leftCamera->clearImgs();
+                if (rightCamera) {
+                    rightCamera->clearImgs();
+                }
+                if (colorCamera) {
+                    colorCamera->clearImgs();
+                }
+                return false;
+            }
+        }
+    } else {
+        leftCamera->clearImgs();
+        if (rightCamera) {
+            rightCamera->clearImgs();
+        }
+        if (colorCamera) {
+            colorCamera->clearImgs();
+        }
+
+        const int exposureTimeUs =
+            CameraEngine::instance()->getNumberAttribute("Exposure Time");
+        projector->stop();
+        for (int i = 0; i < imgSizeWaitFor; ++i) {
+            projector->step();
+            std::this_thread::sleep_for(
+                std::chrono::microseconds(exposureTimeUs));
+            leftCamera->capture();
             if (rightCamera) {
-                rightCamera->clearImgs();
+                rightCamera->capture();
             }
             if (colorCamera) {
-                colorCamera->clearImgs();
+                colorCamera->capture();
             }
-            return false;
         }
+        projector->stop();
     }
 
     leftCamera->setTrigMode(trigSoftware);

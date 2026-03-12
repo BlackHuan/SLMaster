@@ -3,6 +3,9 @@
 #include "../binocular/binoSinusCompleGrayCodePattern.h"
 #include "../tool.h"
 
+#include <chrono>
+#include <thread>
+
 namespace slmaster {
 namespace cameras {
 TrinocularCamera::TrinocularCamera(IN const std::string jsonPath)
@@ -450,21 +453,38 @@ bool TrinocularCamera::capture(FrameData &frameData) {
                                    numbericalProperties_["Aft Exposure Time"]) *
                                   imgSizeWaitFor;
 
-    pProjector->project(false);
+    if (pProjector->isHardwareTriggerSupported()) {
+        pProjector->project(false);
 
-    auto endTime = std::chrono::steady_clock::now() +
-                   std::chrono::duration<int, std::ratio<1, 1000000>>(
-                       totalExposureTime + 1000000);
-    // 注意相机回调函数是主函数运行，因此尽量将该线程设置为多线程，从而不影响相机取图
-    while (pLeftCamera->getImgs().size() < imgSizeWaitFor ||
-           pRightCamera->getImgs().size() < imgSizeWaitFor ||
-           pColorCamera->getImgs().size() < imgSizeWaitFor) {
-        if (std::chrono::steady_clock::now() > endTime) {
-            pLeftCamera->clearImgs();
-            pRightCamera->clearImgs();
-            pColorCamera->clearImgs();
-            return false;
+        auto endTime = std::chrono::steady_clock::now() +
+                       std::chrono::duration<int, std::ratio<1, 1000000>>(
+                           totalExposureTime + 1000000);
+        while (pLeftCamera->getImgs().size() < imgSizeWaitFor ||
+               pRightCamera->getImgs().size() < imgSizeWaitFor ||
+               pColorCamera->getImgs().size() < imgSizeWaitFor) {
+            if (std::chrono::steady_clock::now() > endTime) {
+                pLeftCamera->clearImgs();
+                pRightCamera->clearImgs();
+                pColorCamera->clearImgs();
+                return false;
+            }
         }
+    } else {
+        pLeftCamera->clearImgs();
+        pRightCamera->clearImgs();
+        pColorCamera->clearImgs();
+
+        pProjector->stop();
+        for (int i = 0; i < imgSizeWaitFor; ++i) {
+            pProjector->step();
+            std::this_thread::sleep_for(
+                std::chrono::microseconds(
+                    static_cast<int>(numbericalProperties_["Exposure Time"])));
+            pLeftCamera->capture();
+            pRightCamera->capture();
+            pColorCamera->capture();
+        }
+        pProjector->stop();
     }
 
     std::vector<std::vector<cv::Mat>> imgs(3);

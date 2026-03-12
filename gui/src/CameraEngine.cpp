@@ -247,15 +247,19 @@ void CameraEngine::createTenLine() {
         patternSets[i].imgs_ = i == 0 ? verticalLine : honrizonLine;
     }
 
-    switchTrigMode(false, getNumberAttribute("Exposure Time"));
+    if (pProjector->isHardwareTriggerSupported()) {
+        switchTrigMode(false, getNumberAttribute("Exposure Time"));
+    }
 
     bool isSuccess = pProjector->populatePatternTableData(patternSets);
 
-    switchTrigMode(true, (getNumberAttribute("Exposure Time") +
-                          getNumberAttribute("Pre Exposure Time") +
-                          getNumberAttribute("Aft Exposure Time")) *
-                                 2 -
-                             1000);
+    if (pProjector->isHardwareTriggerSupported()) {
+        switchTrigMode(true, (getNumberAttribute("Exposure Time") +
+                              getNumberAttribute("Pre Exposure Time") +
+                              getNumberAttribute("Aft Exposure Time")) *
+                                     2 -
+                                 1000);
+    }
 
     isBurnWorkFinish_ = true;
     emit isBurnWorkFinishChanged();
@@ -469,7 +473,9 @@ void CameraEngine::burnStripe() {
                                   patternSets.end());
         }
 
-        switchTrigMode(false, getNumberAttribute("Exposure Time"));
+        if (pProjector->isHardwareTriggerSupported()) {
+            switchTrigMode(false, getNumberAttribute("Exposure Time"));
+        }
 
         bool isSuccess = pProjector->populatePatternTableData(sumPatternSets);
 
@@ -480,7 +486,9 @@ void CameraEngine::burnStripe() {
             qDebug() << QString("burn stripes failed!");
         }
 
-        switchTrigMode(true, getNumberAttribute("Exposure Time"));
+        if (pProjector->isHardwareTriggerSupported()) {
+            switchTrigMode(true, getNumberAttribute("Exposure Time"));
+        }
 
         isBurnWorkFinish_ = true;
         isBurnWorkFinishChanged();
@@ -973,30 +981,53 @@ void CameraEngine::projectOnce() {
 
         isProject_.store(true, std::memory_order_release);
 
-        projector->project(false);
-
         const int imgSizeWaitFor = getNumberAttribute("Total Fringes");
-        const int totalExposureTime =
-            (getNumberAttribute("Pre Exposure Time") +
-             getNumberAttribute("Exposure Time") +
-             getNumberAttribute("Aft Exposure Time")) *
-            imgSizeWaitFor;
-        auto endTime = std::chrono::steady_clock::now() +
-                       std::chrono::duration<int, std::ratio<1, 1000000>>(
-                           totalExposureTime + 1000000);
-        while (std::chrono::steady_clock::now() < endTime ||
-               !leftCamera->getImgs().empty()) {
-            if (!leftCamera->getImgs().empty()) {
-                cv::Mat img = leftCamera->popImg();
-                QImage::Format formatType = img.type() == CV_8UC3
-                                                ? QImage::Format_BGR888
-                                                : QImage::Format_Grayscale8;
+
+        if (projector->isHardwareTriggerSupported()) {
+            projector->project(false);
+
+            const int totalExposureTime =
+                (getNumberAttribute("Pre Exposure Time") +
+                 getNumberAttribute("Exposure Time") +
+                 getNumberAttribute("Aft Exposure Time")) *
+                imgSizeWaitFor;
+            auto endTime = std::chrono::steady_clock::now() +
+                           std::chrono::duration<int, std::ratio<1, 1000000>>(
+                               totalExposureTime + 1000000);
+            while (std::chrono::steady_clock::now() < endTime ||
+                   !leftCamera->getImgs().empty()) {
+                if (!leftCamera->getImgs().empty()) {
+                    cv::Mat img = leftCamera->popImg();
+                    QImage::Format formatType =
+                        img.type() == CV_8UC3 ? QImage::Format_BGR888
+                                              : QImage::Format_Grayscale8;
+                    QImage qImage =
+                        QImage(img.data, img.cols, img.rows, img.step,
+                               formatType)
+                            .copy();
+                    stripeImgs_.emplace_back(qImage);
+                    realTimeRenderImg(qImage);
+                }
+            }
+        } else {
+            leftCamera->clearImgs();
+            projector->stop();
+            const int exposureTimeUs = getNumberAttribute("Exposure Time");
+            for (int i = 0; i < imgSizeWaitFor; ++i) {
+                projector->step();
+                std::this_thread::sleep_for(
+                    std::chrono::microseconds(exposureTimeUs));
+                cv::Mat img = leftCamera->capture();
+                QImage::Format formatType =
+                    img.type() == CV_8UC3 ? QImage::Format_BGR888
+                                          : QImage::Format_Grayscale8;
                 QImage qImage =
                     QImage(img.data, img.cols, img.rows, img.step, formatType)
                         .copy();
                 stripeImgs_.emplace_back(qImage);
                 realTimeRenderImg(qImage);
             }
+            projector->stop();
         }
 
         emit stripeImgsChanged(stripeImgs_.size());

@@ -120,6 +120,13 @@ class DEVICE_API Projector {
      */
     virtual bool step() = 0;
     /**
+     * @brief 是否支持硬件触发
+     *
+     * @return true DLP等支持硬件触发信号的投影仪
+     * @return false HDMI等不支持硬件触发的投影仪
+     */
+    virtual bool isHardwareTriggerSupported() const { return true; }
+    /**
      * @brief 获取当前LED三色灯电流值
      *
      * @param r 红色电流值

@@ -99,6 +99,7 @@ class DEVICE_API ProjectorHdmi : public Projector {
      * @return false 失败
      */
     bool step() override;
+    bool isHardwareTriggerSupported() const override;
     /**
      * @brief 不支持（HDMI投影仪无LED）
      *
@@ -155,6 +156,10 @@ class DEVICE_API ProjectorHdmi : public Projector {
     std::condition_variable cv_;
     std::atomic<bool> threadRunning_;
     bool isContinue_;
+
+    std::mutex stepMutex_;
+    std::condition_variable stepDoneCv_;
+    bool stepDone_;
 };
 } // namespace device
 } // namespace slmaster

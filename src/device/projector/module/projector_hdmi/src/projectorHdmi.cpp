@@ -11,7 +11,7 @@ ProjectorHdmi::ProjectorHdmi()
     : isConnected_(false), state_(ProjectState::Idle), stepRequested_(false),
       currentPatternIndex_(0), screenId_(1), width_(1920), height_(1080),
       exposureTimeUs_(16000), windowName_(WINDOW_NAME), threadRunning_(false),
-      isContinue_(true) {}
+      isContinue_(true), stepDone_(false) {}
 
 ProjectorHdmi::~ProjectorHdmi() {
     stop();
@@ -106,6 +106,12 @@ void ProjectorHdmi::projectionLoop() {
             cv::waitKey(1);
             currentPatternIndex_ =
                 (currentPatternIndex_ + 1) % patterns_.size();
+            lock.unlock();
+            {
+                std::lock_guard<std::mutex> stepLock(stepMutex_);
+                stepDone_ = true;
+            }
+            stepDoneCv_.notify_one();
             continue;
         }
 
@@ -200,10 +206,16 @@ bool ProjectorHdmi::step() {
         projectionThread_ = std::thread(&ProjectorHdmi::projectionLoop, this);
     }
 
+    std::unique_lock<std::mutex> stepLock(stepMutex_);
+    stepDone_ = false;
     stepRequested_.store(true);
     cv_.notify_all();
-    return true;
+
+    return stepDoneCv_.wait_for(stepLock, std::chrono::milliseconds(1000),
+                                [this] { return stepDone_; });
 }
+
+bool ProjectorHdmi::isHardwareTriggerSupported() const { return false; }
 
 bool ProjectorHdmi::getLEDCurrent(double &r, double &g, double &b) {
     r = g = b = 0.0;
