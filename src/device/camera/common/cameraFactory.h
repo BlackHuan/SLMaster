@@ -16,6 +16,7 @@
 #include <unordered_map>
 
 #include "huarayCamera.h"
+#include "dahengCamera.h"
 
 /** @brief 结构光库 **/
 namespace slmaster {
@@ -28,7 +29,8 @@ class DEVICE_API CameraFactory {
     /**@brief 制造商*/
     enum CameraManufactor {
         Huaray = 0, // 华睿科技
-        Halcon      // 海康机器人
+        Halcon,     // 海康机器人
+        Daheng      // 大恒光电
     };
 
     Camera *getCamera(std::string cameraUserId, CameraManufactor manufactor) {
@@ -44,6 +46,9 @@ class DEVICE_API CameraFactory {
             // TODO@Evans Liu:增加海康相机支持
             else if (Halcon == manufactor) {
                 camera = new HuarayCammera(cameraUserId);
+                cameras_[cameraUserId] = camera;
+            } else if (Daheng == manufactor) {
+                camera = new DahengCamera(cameraUserId);
                 cameras_[cameraUserId] = camera;
             }
         }
