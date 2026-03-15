@@ -36,7 +36,10 @@ class VTKProcessEngine : public QObject {
     Q_PROPERTY(int pointSize READ pointSize NOTIFY pointSizeChanged FINAL)
     Q_PROPERTY(int postProcessPointSize READ postProcessPointSize NOTIFY postProcessPointSizeChanged FINAL)
 public:
-    static VTKProcessEngine* instance() { return vtkProcessEngine_; };
+    static VTKProcessEngine* instance() {
+        static VTKProcessEngine* inst = new VTKProcessEngine();
+        return inst;
+    }
     void updateSelectedRec();
     void bindEngine(QQmlApplicationEngine* engine) { engine_ = engine; }
     vtkSmartPointer<vtkActor> getProcessActor() { return processActor_; }
@@ -89,7 +92,6 @@ private:
     ~VTKProcessEngine();
     VTKProcessEngine(const VTKProcessEngine&) = delete;
     VTKProcessEngine& operator=(const VTKProcessEngine&) = delete;
-    static VTKProcessEngine* vtkProcessEngine_;
     void detectSignals();
     float progressVal_;
     //std::atomic_bool __isProgressValChanged;
