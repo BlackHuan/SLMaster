@@ -5,7 +5,8 @@ project(algorithm)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 find_package(PCL REQUIRED)
-find_package(Eigen3 REQUIRED)
+# find_package(Eigen3 REQUIRED)
+set(EIGEN3_INCLUDE_DIRS "C:/Users/black/Workspace/Project/thirdparty/pcl/3rdParty/Eigen/eigen3")
 find_package(OpenCV COMPONENTS core cudev)
 
 FILE(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/cpuStructuredLight/*.h ${CMAKE_CURRENT_SOURCE_DIR}/cpuStructuredLight/*.hpp ${CMAKE_CURRENT_SOURCE_DIR}/cpuStructuredLight/*.cpp)

@@ -52,10 +52,10 @@
 #include <pcl/surface/vtk_smoothing/vtk_utils.h>
 
 
-VTKProcessEngine *VTKProcessEngine::vtkProcessEngine_ = new VTKProcessEngine();
-vtkNew<vtkActor> tempActor;
-
-vtkNew<vtkLookupTable> lookupPre;
+static vtkNew<vtkLookupTable>& getLookupPre() {
+    static vtkNew<vtkLookupTable> lookup;
+    return lookup;
+}
 const double axesActor_length = 100.0;
 const int16_t axesActor_label_font_size = 20;
 
@@ -619,7 +619,7 @@ void VTKProcessEngine::cancelColorizeCloud() {
     curCloud->GetMapper()->SetScalarVisibility(true);
     auto lookUp =
         static_cast<vtkLookupTable *>(curCloud->GetMapper()->GetLookupTable());
-    lookUp->DeepCopy(lookupPre);
+    lookUp->DeepCopy(getLookupPre());
 
     curItem_->update();
 }
@@ -649,7 +649,7 @@ void VTKProcessEngine::jetDepthColorMap() {
 
     auto lookUp =
         static_cast<vtkLookupTable *>(curCloud->GetMapper()->GetLookupTable());
-    lookupPre->DeepCopy(lookUp);
+    getLookupPre()->DeepCopy(lookUp);
 
     auto scalars = vtkFloatArray::SafeDownCast(
         vtkUnstructuredGrid::SafeDownCast(

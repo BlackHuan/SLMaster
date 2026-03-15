@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.20)
 
 project(calibration)
 
-find_package(Eigen3 REQUIRED)
+# find_package(Eigen3 REQUIRED)
+set(EIGEN3_INCLUDE_DIRS "C:/Users/black/Workspace/Project/thirdparty/pcl/3rdParty/Eigen/eigen3")
 find_package(OpenCV COMPONENTS core REQUIRED)
 
 file(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/*.h ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
