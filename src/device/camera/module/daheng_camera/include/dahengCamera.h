@@ -16,6 +16,8 @@
 #include "camera.h"
 #include "safeQueue.hpp"
 
+#include <atomic>
+#include <mutex>
 #include <opencv2/opencv.hpp>
 
 /** @brief slmaster */
@@ -59,10 +61,13 @@ class DEVICE_API DahengCamera : public Camera {
     GX_DEV_HANDLE getHandle() { return hDevice_; }
 
   private:
+    static std::mutex sLibMutex_;
+    static int sLibRefCount_;
+
     const std::string cameraUserId_;
     GX_DEV_HANDLE hDevice_;
-    bool isOpen_;
-    bool isGrabbing_;
+    std::atomic<bool> isOpen_;
+    std::atomic<bool> isGrabbing_;
     SafeQueue<cv::Mat> imgs_;
 };
 } // namespace device

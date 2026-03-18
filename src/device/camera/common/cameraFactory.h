@@ -26,6 +26,14 @@ namespace device {
 class DEVICE_API CameraFactory {
   public:
     CameraFactory(){};
+    ~CameraFactory() {
+        for (auto &pair : cameras_) {
+            delete pair.second;
+        }
+        cameras_.clear();
+    }
+    CameraFactory(const CameraFactory &) = delete;
+    CameraFactory &operator=(const CameraFactory &) = delete;
     /**@brief 制造商*/
     enum CameraManufactor {
         Huaray = 0, // 华睿科技

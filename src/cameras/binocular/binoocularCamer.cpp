@@ -243,7 +243,7 @@ bool BinocularCamera::disConnect() {
         projectorFactory_.getProjector(stringProperties_["DLP Evm"])
             ->disConnect();
     bool disConnectcolorCamera = true;
-    if (stringProperties_["Color Camera Name"] == "") {
+    if (stringProperties_["Color Camera Name"] != "") {
         disConnectcolorCamera =
             cameraFactory_
                 .getCamera(stringProperties_["Color Camera Name"], manufator)
@@ -269,7 +269,7 @@ bool BinocularCamera::isConnect() {
         projectorFactory_.getProjector(stringProperties_["DLP Evm"])
             ->isConnect();
     bool isConnectColorCamera = true;
-    if (stringProperties_["Color Camera Name"] == "") {
+    if (stringProperties_["Color Camera Name"] != "") {
         isConnectColorCamera =
             cameraFactory_
                 .getCamera(stringProperties_["Color Camera Name"], manufator)

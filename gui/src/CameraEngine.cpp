@@ -1069,18 +1069,16 @@ void CameraEngine::projectContinues() {
         bool hasRightCamera = getSLCamera()->getStringAttribute(
             "Right Camera Name", rightCameraName);
         bool hasColorCamera = getSLCamera()->getStringAttribute(
-            "Color Camera Name", rightCameraName);
+            "Color Camera Name", colorCameraName);
         Camera *rightCamera =
             hasRightCamera
                 ? getSLCamera()->getCameraFactory()->getCamera(
-                      getStringAttribute("Right Camera Name").toStdString(),
-                      manufator)
+                      rightCameraName, manufator)
                 : nullptr;
         Camera *colorCamera =
-            hasRightCamera
+            hasColorCamera
                 ? getSLCamera()->getCameraFactory()->getCamera(
-                      getStringAttribute("Color Camera Name").toStdString(),
-                      manufator)
+                      colorCameraName, manufator)
                 : nullptr;
 
         stripeImgs_.clear();

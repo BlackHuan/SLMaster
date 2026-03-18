@@ -1,11 +1,15 @@
 #include "dahengCamera.h"
 
 #include <chrono>
+#include <mutex>
 #include <unordered_map>
 #include <vector>
 
 namespace slmaster {
 namespace device {
+
+std::mutex DahengCamera::sLibMutex_;
+int DahengCamera::sLibRefCount_ = 0;
 
 static const std::unordered_map<std::string, GX_FEATURE_ID_CMD> kFloatFeatureMap = {
     {"ExposureTime",                GX_FLOAT_EXPOSURE_TIME},
@@ -197,17 +201,23 @@ static bool resolveEnumValue(GX_DEV_HANDLE hDevice,
 DahengCamera::DahengCamera(const std::string cameraUserId)
     : cameraUserId_(cameraUserId), hDevice_(nullptr), isOpen_(false),
       isGrabbing_(false) {
-    GXInitLib();
+    std::lock_guard<std::mutex> lock(sLibMutex_);
+    if (sLibRefCount_++ == 0) {
+        GXInitLib();
+    }
 }
 
 DahengCamera::~DahengCamera() {
-    if (isGrabbing_) {
+    if (isGrabbing_.load(std::memory_order_acquire)) {
         pause();
     }
-    if (isOpen_) {
+    if (isOpen_.load(std::memory_order_acquire)) {
         disConnect();
     }
-    GXCloseLib();
+    std::lock_guard<std::mutex> lock(sLibMutex_);
+    if (--sLibRefCount_ == 0) {
+        GXCloseLib();
+    }
 }
 
 CameraInfo DahengCamera::getCameraInfo() {
@@ -273,7 +283,7 @@ bool DahengCamera::connect() {
         return false;
     }
 
-    isOpen_ = true;
+    isOpen_.store(true, std::memory_order_release);
     return true;
 }
 
@@ -283,12 +293,12 @@ bool DahengCamera::disConnect() {
         return false;
     }
 
-    if (!isOpen_) {
+    if (!isOpen_.load(std::memory_order_acquire)) {
         printf("Daheng: camera is already closed.\n");
         return false;
     }
 
-    if (isGrabbing_) {
+    if (isGrabbing_.load(std::memory_order_acquire)) {
         pause();
     }
 
@@ -299,14 +309,14 @@ bool DahengCamera::disConnect() {
     }
 
     hDevice_ = nullptr;
-    isOpen_ = false;
+    isOpen_.store(false, std::memory_order_release);
     return true;
 }
 
 SafeQueue<cv::Mat> &DahengCamera::getImgs() { return imgs_; }
 
 bool DahengCamera::pushImg(const cv::Mat &img) {
-    imgs_.push(std::move(img));
+    imgs_.push(img);
     return true;
 }
 
@@ -322,12 +332,29 @@ bool DahengCamera::clearImgs() {
     return true;
 }
 
-bool DahengCamera::isConnect() { return isOpen_ && hDevice_ != nullptr; }
+bool DahengCamera::isConnect() {
+    return isOpen_.load(std::memory_order_acquire) && hDevice_ != nullptr;
+}
 
 cv::Mat DahengCamera::capture() {
     if (!isConnect()) {
         printf("Daheng: camera is not open!\n");
         return cv::Mat();
+    }
+
+    TrigMode prevTrigMode = trigLine;
+    int64_t trigModeVal = 0;
+    if (GXGetEnum(hDevice_, GX_ENUM_TRIGGER_MODE, &trigModeVal) == GX_STATUS_SUCCESS) {
+        if (trigModeVal == GX_TRIGGER_MODE_OFF) {
+            prevTrigMode = trigContinous;
+        } else {
+            int64_t trigSrcVal = 0;
+            if (GXGetEnum(hDevice_, GX_ENUM_TRIGGER_SOURCE, &trigSrcVal) == GX_STATUS_SUCCESS) {
+                prevTrigMode = (trigSrcVal == GX_TRIGGER_SOURCE_SOFTWARE)
+                                   ? trigSoftware
+                                   : trigLine;
+            }
+        }
     }
 
     const int preNums = imgs_.size();
@@ -337,29 +364,32 @@ cv::Mat DahengCamera::capture() {
     GX_STATUS status = GXSendCommand(hDevice_, GX_COMMAND_TRIGGER_SOFTWARE);
     if (status != GX_STATUS_SUCCESS) {
         printf("Daheng: software trigger fail, ErrorCode[%d]\n", status);
+        setTrigMode(prevTrigMode);
         return cv::Mat();
     }
 
     double exposureTime = 100000.0;
     getNumbericalAttribute("ExposureTime", exposureTime);
 
-    auto timeBegin = std::chrono::system_clock::now();
+    const double timeoutSec = exposureTime / 1000000.0 * 2;
+    auto timeBegin = std::chrono::steady_clock::now();
     while (preNums == (int)imgs_.size()) {
-        auto timeEnd = std::chrono::system_clock::now();
-        auto timeElapsed =
-            std::chrono::duration_cast<std::chrono::milliseconds>(timeEnd -
-                                                                  timeBegin)
-                .count() *
-            (double)std::chrono::milliseconds::period::num /
-            std::chrono::milliseconds::period::den;
-        if (timeElapsed > (exposureTime / 1000000.0 * 2)) {
+        auto elapsed = std::chrono::duration<double>(
+                           std::chrono::steady_clock::now() - timeBegin)
+                           .count();
+        if (elapsed > timeoutSec) {
             break;
         }
     }
 
-    cv::Mat capturedImg = imgs_.back();
+    cv::Mat capturedImg;
+    if ((int)imgs_.size() > preNums) {
+        capturedImg = imgs_.back();
+    } else {
+        printf("Daheng: capture timeout, no new frame received.\n");
+    }
 
-    setTrigMode(TrigMode::trigLine);
+    setTrigMode(prevTrigMode);
 
     return capturedImg;
 }
@@ -370,7 +400,7 @@ bool DahengCamera::start() {
         return false;
     }
 
-    if (isGrabbing_) {
+    if (isGrabbing_.load(std::memory_order_acquire)) {
         printf("Daheng: camera is already grabbing.\n");
         return false;
     }
@@ -390,7 +420,7 @@ bool DahengCamera::start() {
         return false;
     }
 
-    isGrabbing_ = true;
+    isGrabbing_.store(true, std::memory_order_release);
     return true;
 }
 
@@ -400,7 +430,7 @@ bool DahengCamera::pause() {
         return false;
     }
 
-    if (!isGrabbing_) {
+    if (!isGrabbing_.load(std::memory_order_acquire)) {
         printf("Daheng: camera is not grabbing.\n");
         return false;
     }
@@ -418,7 +448,7 @@ bool DahengCamera::pause() {
         return false;
     }
 
-    isGrabbing_ = false;
+    isGrabbing_.store(false, std::memory_order_release);
     return true;
 }
 
@@ -656,6 +686,9 @@ bool DahengCamera::getBooleanAttribute(const std::string attributeName,
 }
 
 int DahengCamera::getFps() {
+    if (!isConnect()) {
+        return 0;
+    }
     double fps = 0.0;
     GXGetFloat(hDevice_, GX_FLOAT_CURRENT_ACQUISITION_FRAME_RATE, &fps);
     return static_cast<int>(fps);
