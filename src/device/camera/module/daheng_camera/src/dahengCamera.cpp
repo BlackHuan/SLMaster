@@ -228,10 +228,10 @@ CameraInfo DahengCamera::getCameraInfo() {
     }
 
     for (uint32_t i = 0; i < nDeviceNum; ++i) {
-        if (cameraUserId_ == deviceInfos[i].szUserID) {
+        if (cameraUserId_ == deviceInfos[i].szSN) {
             info.isFind_ = true;
             info.cameraKey_ = deviceInfos[i].szSN;
-            info.cameraUserId_ = deviceInfos[i].szUserID;
+            info.cameraUserId_ = deviceInfos[i].szSN;
             switch (deviceInfos[i].deviceClass) {
             case GX_DEVICE_CLASS_USB2:
                 info.deviceType_ = "USB2";
@@ -262,7 +262,7 @@ bool DahengCamera::connect() {
 
     GX_OPEN_PARAM openParam;
     openParam.pszContent = const_cast<char *>(cameraUserId_.c_str());
-    openParam.openMode = GX_OPEN_USERID;
+    openParam.openMode = GX_OPEN_SN;
     openParam.accessMode = GX_ACCESS_EXCLUSIVE;
 
     status = GXOpenDevice(&openParam, &hDevice_);

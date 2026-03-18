@@ -9,7 +9,7 @@ static const char *WINDOW_NAME = "SLMaster_HDMI_Projector";
 
 ProjectorHdmi::ProjectorHdmi()
     : isConnected_(false), state_(ProjectState::Idle), stepRequested_(false),
-      currentPatternIndex_(0), screenId_(1), width_(1920), height_(1080),
+      currentPatternIndex_(0), screenId_(1), width_(1280), height_(720),
       exposureTimeUs_(16000), windowName_(WINDOW_NAME), threadRunning_(false),
       isContinue_(true), stepDone_(false) {}
 
@@ -23,7 +23,7 @@ ProjectorInfo ProjectorHdmi::getInfo() {
     info.dlpEvmType_ = "HDMI";
     info.width_ = width_;
     info.height_ = height_;
-    info.isFind_ = isConnected_.load();
+    info.isFind_ = true;
     return info;
 }
 
@@ -35,7 +35,7 @@ bool ProjectorHdmi::connect() {
     cv::namedWindow(windowName_, cv::WINDOW_NORMAL);
     cv::setWindowProperty(windowName_, cv::WND_PROP_FULLSCREEN,
                           cv::WINDOW_FULLSCREEN);
-    cv::moveWindow(windowName_, screenId_ * width_, 0);
+    cv::moveWindow(windowName_, 3840, 0);
 
     cv::Mat black = cv::Mat::zeros(height_, width_, CV_8UC1);
     cv::imshow(windowName_, black);

@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.20)
 
 project(dahengCamera)
 
+set(DAHENG_SDK_PATH "C:/Program Files/Daheng Imaging/GalaxySDK/Development/VC SDK")
+
 find_package(OpenCV REQUIRED)
 
 file(GLOB_RECURSE HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
@@ -19,8 +21,6 @@ endif()
 
 target_sources(dahengCamera PUBLIC ${HEADERS} ${SOURCES})
 
-target_link_directories(dahengCamera PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib)
-
 target_include_directories(
     dahengCamera
     PRIVATE
@@ -28,10 +28,21 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+target_include_directories(
+    dahengCamera
+    PUBLIC
+    ${DAHENG_SDK_PATH}/inc
+)
+
 target_link_libraries(
     dahengCamera
     PUBLIC
     ${OpenCV_LIBRARIES}
-    GxIAPI
-    DxImageProc
+)
+
+target_link_libraries(
+    dahengCamera
+    PRIVATE
+    ${DAHENG_SDK_PATH}/lib/x64/GxIAPI.lib
+    ${DAHENG_SDK_PATH}/lib/x64/DxImageProc.lib
 )
